@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+:root {
+  --background: #faf9f6;
+  --foreground: #1a1a1a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-heading), Georgia, serif;
+}
+
+.story-card {
+  border-top: 1px solid #e5dfd4;
+  padding: 16px 0;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.story-card:hover {
+  transform: translateY(-1px);
+  border-color: #cec4b3;
+}
+
+.tag {
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  font-family: var(--font-body), sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  text-transform: uppercase;
+}
+
+.tag-corporate {
+  background: #e7eff5;
+  border-color: #cadbe8;
+  color: #2f5978;
+}
+
+.tag-grassroots {
+  background: #e8f2ea;
+  border-color: #c6dfcc;
+  color: #2f6a43;
+}
+
+.recent-pill {
+  border: 1px solid #d8d1c3;
+  border-radius: 9999px;
+  color: #5d564b;
+  font-family: var(--font-body), sans-serif;
+  font-size: 12px;
+  padding: 5px 10px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.recent-pill:hover {
+  border-color: #a09482;
+  color: #1f1d18;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 520ms ease both;
+}
+
+.animate-fade-up-delayed {
+  animation: fadeUp 520ms ease both;
+  animation-delay: 120ms;
+}
+
+.animate-fade-up-more {
+  animation: fadeUp 520ms ease both;
+  animation-delay: 200ms;
+}
