@@ -9,6 +9,19 @@ function getSql() {
   return neon(databaseUrl);
 }
 
+/** Ensures table exists on every cold start (dashboard only queried SELECT before). */
+let briefingsSchemaReady: Promise<void> | null = null;
+
+async function ensureBriefingsTable(): Promise<void> {
+  if (!briefingsSchemaReady) {
+    briefingsSchemaReady = initBriefingsTable().catch((err) => {
+      briefingsSchemaReady = null;
+      throw err;
+    });
+  }
+  await briefingsSchemaReady;
+}
+
 type BriefingRow = {
   id: string;
   date: string;
@@ -33,6 +46,11 @@ function toBriefing(row: BriefingRow): Briefing {
 
 export async function initBriefingsTable(): Promise<void> {
   const sql = getSql();
+  try {
+    await sql`CREATE EXTENSION IF NOT EXISTS pgcrypto`;
+  } catch {
+    /* Neon/PG may already provide gen_random_uuid without extension */
+  }
   await sql`
     CREATE TABLE IF NOT EXISTS briefings (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -53,6 +71,7 @@ export async function upsertBriefing(input: {
   personalImplications: string;
   rawSources: RawSourceItem[];
 }): Promise<void> {
+  await ensureBriefingsTable();
   const sql = getSql();
   await sql`
     INSERT INTO briefings (date, top_stories, analysis, personal_implications, raw_sources)
@@ -67,6 +86,7 @@ export async function upsertBriefing(input: {
 }
 
 export async function getLatestBriefing(): Promise<Briefing | null> {
+  await ensureBriefingsTable();
   const sql = getSql();
   const rows = (await sql`
     SELECT id, date::text, top_stories, analysis, personal_implications, raw_sources, created_at::text
@@ -79,6 +99,7 @@ export async function getLatestBriefing(): Promise<Briefing | null> {
 }
 
 export async function getBriefingByDate(date: string): Promise<Briefing | null> {
+  await ensureBriefingsTable();
   const sql = getSql();
   const rows = (await sql`
     SELECT id, date::text, top_stories, analysis, personal_implications, raw_sources, created_at::text
@@ -91,6 +112,7 @@ export async function getBriefingByDate(date: string): Promise<Briefing | null> 
 }
 
 export async function getRecentBriefings(limit: number): Promise<Briefing[]> {
+  await ensureBriefingsTable();
   const sql = getSql();
   const rows = (await sql`
     SELECT id, date::text, top_stories, analysis, personal_implications, raw_sources, created_at::text

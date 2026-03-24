@@ -1,14 +1,35 @@
 import { BriefingView } from "@/components/BriefingView";
+import { ConfigError } from "@/components/ConfigError";
 import { getLatestBriefing, getRecentBriefings } from "@/lib/db";
 import { generateNowAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [latest, recent] = await Promise.all([
-    getLatestBriefing(),
-    getRecentBriefings(30),
-  ]);
+  let latest: Awaited<ReturnType<typeof getLatestBriefing>>;
+  let recent: Awaited<ReturnType<typeof getRecentBriefings>>;
+  try {
+    [latest, recent] = await Promise.all([
+      getLatestBriefing(),
+      getRecentBriefings(30),
+    ]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    if (message.includes("DATABASE_URL")) {
+      return (
+        <ConfigError
+          title="Database not configured"
+          message={`Add DATABASE_URL to your environment (local .env.local or Vercel Project → Settings → Environment Variables), then redeploy or restart dev.\n\nDetails: ${message}`}
+        />
+      );
+    }
+    return (
+      <ConfigError
+        title="Could not load briefings"
+        message={`Check that Postgres is reachable and DATABASE_URL is correct.\n\nDetails: ${message}`}
+      />
+    );
+  }
 
   if (!latest) {
     return (
