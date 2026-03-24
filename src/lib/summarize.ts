@@ -5,6 +5,44 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+const FALLBACK_MODELS = [
+  "claude-3-7-sonnet-latest",
+  "claude-3-5-sonnet-20241022",
+];
+
+function modelCandidates(): string[] {
+  const preferred = process.env.ANTHROPIC_MODEL?.trim();
+  return preferred ? [preferred, ...FALLBACK_MODELS] : FALLBACK_MODELS;
+}
+
+async function createWithModelFallback(input: {
+  max_tokens: number;
+  temperature: number;
+  system: string;
+  messages: Array<{ role: "user"; content: string }>;
+}) {
+  let lastError: unknown;
+  for (const model of modelCandidates()) {
+    try {
+      return await anthropic.messages.create({
+        model,
+        ...input,
+      });
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : "";
+      if (!message.includes("not_found_error")) {
+        throw error;
+      }
+    }
+  }
+  throw new Error(
+    `No valid Anthropic model found. Set ANTHROPIC_MODEL in env vars. Last error: ${
+      lastError instanceof Error ? lastError.message : String(lastError)
+    }`
+  );
+}
+
 const SUMMARIZE_SYSTEM_PROMPT = `You are an AI news analyst.
 Given podcast-derived source items from the last 48 hours, produce:
 
@@ -51,8 +89,7 @@ export async function summarizeNeutral(
 ): Promise<NeutralSummary> {
   const prompt = `Source items:\n${JSON.stringify(sources, null, 2)}`;
 
-  const response = await anthropic.messages.create({
-    model: "claude-3-5-sonnet-latest",
+  const response = await createWithModelFallback({
     max_tokens: 1800,
     temperature: 0.2,
     system: SUMMARIZE_SYSTEM_PROMPT,
@@ -81,8 +118,7 @@ export async function summarizePersonalImplications(input: {
   neutralSummary: NeutralSummary;
   personalContext: string;
 }): Promise<string> {
-  const response = await anthropic.messages.create({
-    model: "claude-3-5-sonnet-latest",
+  const response = await createWithModelFallback({
     max_tokens: 600,
     temperature: 0.3,
     system: PERSONAL_SYSTEM_PROMPT,
